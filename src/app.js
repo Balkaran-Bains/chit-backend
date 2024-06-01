@@ -5,7 +5,15 @@ import cors from 'cors';
 
 const app = express();
 
-app.use(cors());
+const corsOptions = {
+    origin: (origin, callback) => {
+        // Allow requests from any origin
+        callback(null, origin);
+    },
+    credentials: true // Enable the Access-Control-Allow-Credentials header
+};
+
+app.use(cors(corsOptions));
 
 app.use(express.json({limit: "16kb"}))
 app.use(express.urlencoded({extended:true, limit:"16kb"}))
