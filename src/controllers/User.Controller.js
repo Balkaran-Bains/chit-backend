@@ -4,6 +4,15 @@ import { User } from "../models/User.Model.js";
 import { generateToken } from "../config/generateToken.js";
 import { uploadonCloudinary } from "../utils/cloudinary.js";
 
+// Set common cookie options
+const getCookieOptions = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production', // Only set to true in production
+  sameSite: process.env.NODE_ENV === 'production' ? 'Strict' : 'Lax', // Use Lax in development
+  path: '/', // Ensure the cookie is accessible across the entire site
+  maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+});
+
 // signUp user
 const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body;
@@ -39,12 +48,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
   const token = generateToken(user._id);
 
-  res.cookie('token', token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production', // Only set to true in production
-    sameSite: 'Strict',
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-  });
+  res.cookie('token', token, getCookieOptions());
 
   return res.status(201).json({
     statusCode: 200,
@@ -70,12 +74,7 @@ const loginUser = asyncHandler(async (req, res) => {
   if (user && (await user.matchPassword(password))) {
     const token = generateToken(user._id);
 
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // Only set to true in production
-      sameSite: 'Strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
+    res.cookie('token', token, getCookieOptions());
 
     res.json({
       statusCode: 200,
@@ -91,23 +90,17 @@ const loginUser = asyncHandler(async (req, res) => {
   }
 });
 
+const allUsers = asyncHandler(async(req, res) => {
+  const keyword = req.query.search ? {
+    $or: [{
+      name: { $regex: req.query.search, $options: "i" }
+    }, {
+      email: { $regex: req.query.search, $options: "i" }
+    }]
+  } : {};
 
-const allUsers = asyncHandler(async(req,res)=>{
-  const keyword= req.query.search
-  ?
-  {
-    $or:[{
-        name: {$regex: req.query.search, $options: "i"}
-    },
-    {
-      email: {$regex: req.query.search, $options: "i"}
-    }
-  ]
-  }:{};
-
-  const users = await User.find(keyword).find({_id:{$ne: req.user._id}}) // the last find wali line will will serach the user except the user itself.
+  const users = await User.find(keyword).find({ _id: { $ne: req.user._id } });
   res.send(users);
 });
-
 
 export { registerUser, loginUser, allUsers };
